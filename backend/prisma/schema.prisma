@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  role          Role      @default(USER)
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  scans         Scan[]
+  auditLogs     AuditLog[]
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+model Scan {
+  id              String    @id @default(uuid())
+  url             String
+  domain          String?
+  ip              String?
+  title           String?
+  status          ScanStatus @default(PENDING)
+  riskScore       Float     @default(0)
+  confidence      Float     @default(0)
+  verdict         String?
+  recommendation  String?
+  llmResponse     Json?
+  urlAnalysis     Json?
+  htmlAnalysis    Json?
+  ocrResult       Json?
+  brandDetection  Json?
+  screenshotUrl   String?
+  metadata        Json?
+  redirectChain   Json?
+  headers         Json?
+  cookies         Json?
+  sslInfo         Json?
+  hostingInfo     Json?
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  reports         Report[]
+}
+
+enum ScanStatus {
+  PENDING
+  CRAWLING
+  ANALYZING
+  LLM_PROCESSING
+  COMPLETED
+  FAILED
+}
+
+model Report {
+  id          String   @id @default(uuid())
+  scanId      String
+  scan        Scan     @relation(fields: [scanId], references: [id])
+  content     Json
+  format      String   @default("json")
+  createdAt   DateTime @default(now())
+}
+
+model Domain {
+  id              String   @id @default(uuid())
+  name            String   @unique
+  registered      Boolean  @default(false)
+  registrar       String?
+  creationDate    DateTime?
+  expirationDate  DateTime?
+  nameservers     String[]
+  lastChecked     DateTime @default(now())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model LLMResponse {
+  id          String   @id @default(uuid())
+  scanId      String
+  provider    String
+  model       String
+  request     Json
+  response    Json
+  tokensUsed  Int?
+  latencyMs   Int?
+  createdAt   DateTime @default(now())
+}
+
+model Image {
+  id          String   @id @default(uuid())
+  scanId      String
+  url         String
+  s3Key       String?
+  width       Int?
+  height      Int?
+  mimeType    String?
+  sizeBytes   Int?
+  createdAt   DateTime @default(now())
+}
+
+model OCRResult {
+  id          String   @id @default(uuid())
+  imageId     String
+  text        String
+  confidence  Float
+  language    String?
+  createdAt   DateTime @default(now())
+}
+
+model RiskScore {
+  id          String   @id @default(uuid())
+  scanId      String
+  source      String
+  score       Float
+  weight      Float
+  details     Json?
+  createdAt   DateTime @default(now())
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    Json?
+  ipAddress   String?
+  userAgent   String?
+  createdAt   DateTime @default(now())
+}
